@@ -1,0 +1,24 @@
+{% load static %}
+
+
+{% for contact in contacts %}
+    <p>{{contact}}</p>
+{% endfor %}
+    
+
+{% comment %} {% for user in users %}
+
+    <p>{{user.username}}</p>
+
+    {% for message in messages %}
+        {% if message.user_from == user %}
+            <p>-> {{message.message}}</p>
+        {% else %}
+            <p>{{message.message}} <-</p>
+        {% endif %}
+    {% endfor %}
+
+    <br />
+
+{% endfor %} {% endcomment %}
+
