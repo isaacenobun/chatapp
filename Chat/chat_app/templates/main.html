@@ -1,24 +1,180 @@
-{% load static %}
+{% load static %} {% load tz %}
 
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    {{ json_groups|json_script:"json-groups" }}
+    {{ send_url|json_script:"send_url" }}
+    {{ stream_url|json_script:"stream_url" }}
+    {{ user.id|json_script:"user.id" }}
+  </head>
+  <body>
+    <div class="overall-chat-container">
+      <!-- Left Side (Chat List) -->
+      <div class="left-side">
+        <div class="main-chat-header">
+          <i class="fa-regular fa-message"></i>
+          <h1 class="chat-main">{{ user.username|title }}</h1>
+        </div>
 
-{% for contact in contacts %}
-    <p>{{contact}}</p>
-{% endfor %}
-    
+        <div class="search-container">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input class="search-input" type="search" placeholder="Search" />
+        </div>
 
-{% comment %} {% for user in users %}
+        <div class="pre-chat-border">
+          <p class="chat-head">
+            Chats <span class="no-of-chats">{{ contacts|length }}</span>
+          </p>
+        </div>
 
-    <p>{{user.username}}</p>
+        <div class="all-chats-container">
+          {% for contact, message in contacts.items %}
+          <div
+            class="chats-container"
+            data-id="{{contact.id}}"
+          >
+            <div class="chat-pic-container">
+              <img
+                class="chat-pic"
+                src="{% static 'img/profile pic.jpg' %}"
+                alt="profile-pic"
+              />
+            </div>
+            <div class="chat-details">
+              <div class="message-sender-name">
+                <span>{{ contact.username|title }}</span>
+                <span class="message-time">
+                  {{ message.created_at|timezone:"Africa/Lagos"|date:"H:i A" }}
+                </span>
+              </div>
+              <div class="message-info-container">
+                <div class="message-info">{{ message.message }}</div>
+                <!-- <p class="no-of-texts">1</p> -->
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
 
-    {% for message in messages %}
-        {% if message.user_from == user %}
-            <p>-> {{message.message}}</p>
-        {% else %}
-            <p>{{message.message}} <-</p>
-        {% endif %}
-    {% endfor %}
+        <!-- Footer Tools -->
+        <div class="more-tools-footer">
+          <div class="tools-icons">
+            <form action="{% url 'sign-out' %}"><button type="submit"><i class="fa-solid fa-sliders"></i></button></form>
+            <i class="fa-solid fa-plus"></i>
+            <i class="fa-regular fa-address-book"></i>
+          </div>
+        </div>
+      </div>
 
-    <br />
+      <!-- Right Side (Chat Messages) -->
+      {% for contact, messages in groups.items %}
+      <div class="right-side" data-id="{{ contact.id }}" style="display: none;">
+        <div class="in-chat-header">
+          <div class="in-chat-image-container">
+            <img
+              class="in-chat-image"
+              src="{% static 'img/profile pic.jpg' %}"
+              alt="profile-pic"
+            />
+          </div>
+          <div class="in-text-name-container">
+            <div class="in-text-name">{{ contact.username | title }}</div>
+            <span class="last-seen">Online</span>
+          </div>
+          <!-- Add Share and Search Icons -->
+          <div class="header-icons">
+            <i class="fa-solid fa-share-nodes"></i>
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+        </div>
 
-{% endfor %} {% endcomment %}
+        <!-- Message Display Area -->
+        <div class="message-display-area">
+          {% for message in messages %} {% if message.user_from == user %}
+          <!-- Sent Message -->
+          <div class="message sent">
+            <div class="message-text">{{ message.message }}</div>
+            <div class="message-time">
+              {{ message.created_at|timezone:"Africa/Lagos"|date:"H:i A" }}
+            </div>
+          </div>
+          {% else %}
+          <!-- Received Message -->
+          <div class="message received">
+            <div class="message-text">{{ message.message }}</div>
+            <div class="message-time">
+              {{ message.created_at|timezone:"Africa/Lagos"|date:"H:i A" }}
+            </div>
+          </div>
+          {% endif %} {% endfor %}
+        </div>
 
+        <form id="textForm-{{contact.id}}">
+          {% csrf_token %}
+        <!-- Text Input Area -->
+        <div class="text-input-area">
+          <div class="input-container">
+            <!-- Add + Icon -->
+            <button class="add-button">
+              <!-- <input type="file" name="add-file" style="display: none;"> -->
+              <i class="fa-solid fa-plus"></i>
+            </button>
+            <!-- Message Input -->
+            <input
+              type="text"
+              class="message-input"
+              placeholder="Type a message..."
+              name="message-text"
+              required
+            />
+            <!-- Send Button -->
+            <button type="submit" class="send-button">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+          
+        <script>
+        document.getElementById("textForm-{{contact.id}}").addEventListener("submit", function (e) {
+          e.preventDefault();
+          let formData = new FormData(this);
+          let id = {{contact.id}};
+          formData.append("receiver", id);
+
+          fetch("{% url 'send' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                document.getElementById("textForm-{{contact.id}}").reset();
+              }
+            });
+        });
+        </script>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <script src="{% static 'js/main.js' %}"></script>
+  </body>
+</html>
